@@ -1,0 +1,73 @@
+environment:
+  obstacles:
+    obs_mountain:
+      shape: polygon
+      corners:
+        - [6.5, 11.5]
+        - [7.5, 14.5]
+        - [10.5, 15.5]
+        - [13.5, 14.5]
+        - [14.5, 11.5]
+        - [13.5, 8.5]
+        - [7.5, 8.5]
+    obs_nfz_1:
+      shape: rectangle
+      center: [14.5, 3]
+      length: 4
+      width: 4
+      rotation: 0
+    obs_nfz_2:
+      shape: rectangle
+      center: [6, 20]
+      length: 5.0
+      width: 5.0
+      rotation: 0
+    obs_nfz_3:
+      shape: rectangle
+      center: [13.0, 19.5]
+      length: 3.0
+      width: 3.0
+      rotation: 0
+    obs_nfz_4:
+      shape: rectangle
+      center: [18, 16.0]
+      length: 3.0
+      width: 3.0
+      rotation: 0
+    obs_nfz_5:
+      shape: rectangle
+      center: [18.5, 5]
+      length: 2.0
+      width: 2.0
+      rotation: 0
+  features:
+    base_1_location:
+      shape: rectangle
+      center: [0, 0]
+      length: 1
+      width: 1
+      rotation: 0
+    lake_1_location:
+      shape: rectangle
+      center: [16.0, 8.3]
+      length: 2
+      width: 2
+      rotation: 0
+    lake_2_location:
+      shape: rectangle
+      center: [3, 15]
+      length: 2
+      width: 2
+      rotation: 0
+    fire_1_location:
+      shape: rectangle
+      center: [18.0, 1]
+      length: 0.5
+      width: 0.5
+      rotation: 0
+    fire_2_location:
+      shape: rectangle
+      center: [9.8, 22.2]
+      length: 0.5
+      width: 0.5
+      rotation: 0

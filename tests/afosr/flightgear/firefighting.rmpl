@@ -1,0 +1,114 @@
+// This macro tells the RMPL Preprocessor where to find the file that
+// describes the world the ARDrone is flying in.
+
+
+// This macro tells the preprocessor to generate a class whose values
+// are all the features defined in the environment yaml file. The class
+// is named "Roadmap".
+class Roadmap {
+    value base_1_location;
+    value lake_1_location;
+    value fire_2_location;
+    value fire_1_location;
+    value lake_2_location;
+}
+
+
+class Boolean {
+    value yes;
+    value no;
+}
+
+class Lake {
+  Roadmap location;
+}
+
+class Fire {
+  initial value high;
+  value medium;
+  value off;
+  Roadmap location;
+}
+
+class ARDrone {
+
+  Roadmap location;
+  Boolean flying;
+  Boolean loaded;
+  Boolean activitydone;
+
+  primitive method takeoff() flying == no => flying == yes;
+  primitive method land() flying == yes => flying == no;
+
+  //primitive method pickup_water(Lake lakespot)
+  primitive method load_water(Lake lakespot)
+    ((flying == yes) && (loaded == no) && (lakespot.location == location)) => ((loaded == yes) && (activitydone==yes));
+
+  primitive method drop_water_high_altiture(Fire firespot)
+    ((flying == yes) && (loaded == yes) && (firespot.location == location) && (firespot == high)) => ((loaded == no) && (firespot == medium) && (activitydone==yes));
+
+  primitive method drop_water_lower_altiture(Fire firespot)
+    ((flying == yes) && (loaded == yes) && (firespot.location == location) && (firespot == medium)) => ((loaded == no) && (firespot == off) && (activitydone==yes));
+    primitive method fly__base_1_location__lake_1_location() [75.4988210722, inf] location == base_1_location && flying == yes => location == lake_1_location;
+    primitive method fly__base_1_location__fire_2_location() [538.00361445, inf] location == base_1_location && flying == yes => location == fire_2_location;
+    primitive method fly__base_1_location__fire_1_location() [194.498290177, inf] location == base_1_location && flying == yes => location == fire_1_location;
+    primitive method fly__base_1_location__lake_2_location() [64.5882341631, inf] location == base_1_location && flying == yes => location == lake_2_location;
+    primitive method fly__lake_1_location__base_1_location() [75.4988210722, inf] location == lake_1_location && flying == yes => location == base_1_location;
+    primitive method fly__lake_1_location__fire_2_location() [388.463590463, inf] location == lake_1_location && flying == yes => location == fire_2_location;
+    primitive method fly__lake_1_location__fire_1_location() [168.398357962, inf] location == lake_1_location && flying == yes => location == fire_1_location;
+    primitive method fly__lake_1_location__lake_2_location() [256.971653114, inf] location == lake_1_location && flying == yes => location == lake_2_location;
+    primitive method fly__fire_2_location__base_1_location() [281.586914847, inf] location == fire_2_location && flying == yes => location == base_1_location;
+    primitive method fly__fire_2_location__lake_1_location() [384.249511617, inf] location == fire_2_location && flying == yes => location == lake_1_location;
+    primitive method fly__fire_2_location__fire_1_location() [2664.18236821, inf] location == fire_2_location && flying == yes => location == fire_1_location;
+    primitive method fly__fire_2_location__lake_2_location() [141.327903234, inf] location == fire_2_location && flying == yes => location == lake_2_location;
+    primitive method fly__fire_1_location__base_1_location() [98.4230412214, inf] location == fire_1_location && flying == yes => location == base_1_location;
+    primitive method fly__fire_1_location__lake_1_location() [151.435346392, inf] location == fire_1_location && flying == yes => location == lake_1_location;
+    primitive method fly__fire_1_location__fire_2_location() [1940.48454572, inf] location == fire_1_location && flying == yes => location == fire_2_location;
+    primitive method fly__fire_1_location__lake_2_location() [312.350577718, inf] location == fire_1_location && flying == yes => location == lake_2_location;
+    primitive method fly__lake_2_location__base_1_location() [64.5882341631, inf] location == lake_2_location && flying == yes => location == base_1_location;
+    primitive method fly__lake_2_location__lake_1_location() [316.042111081, inf] location == lake_2_location && flying == yes => location == lake_1_location;
+    primitive method fly__lake_2_location__fire_2_location() [154.202641058, inf] location == lake_2_location && flying == yes => location == fire_2_location;
+    primitive method fly__lake_2_location__fire_1_location() [716.950337408, inf] location == lake_2_location && flying == yes => location == fire_1_location;}
+
+class Main {
+  ARDrone ar;
+  Lake lake1;
+  Lake lake2;
+  Fire fire1;
+  Fire fire2;
+
+
+  Main (){
+      ar = new ARDrone();
+      ar.location = base_1_location;
+      ar.flying = no;
+      ar.loaded = no;
+      ar.activitydone = yes;
+
+      lake1 = new Lake();
+      lake1.location = lake_1_location;
+
+      lake2 = new Lake();
+      lake2.location = lake_2_location;
+
+      fire1 = new Fire();
+      fire1.location = fire_1_location;
+      fire1 = high;
+
+      fire2 = new Fire();
+      fire2.location = fire_2_location;
+      fire2 = high;
+
+  }
+  method run() {
+    sequence {
+      (fire1 == off);
+      (ar.location == lake_1_location);
+      (fire2 == off);
+      (ar.location == lake_2_location);
+      ar.land();
+      (ar.location == base_1_location);
+    }
+  }
+}
+ 

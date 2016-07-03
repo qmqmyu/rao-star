@@ -1,0 +1,10 @@
+#Auto-generated config file. Please make the appropriate modifications.
+
+#Example: PSULU_DIR		~/git/psulu-j.
+PSULU_DIR		~/GIT-MERS/mers/psulu-j
+
+#Example: ENVIRONMENT_FILE		./mapRovers.yaml
+ENVIRONMENT_FILE		mapRovers.yaml
+
+#Example: CPLEX_EXECUTABLE_FOLDER		/opt/ibm/ILOG/CPLEX_Studio1261/cplex/bin/x86-64_linux
+CPLEX_EXECUTABLE_FOLDER		/opt/ibm/ILOG/CPLEX_Studio1261/cplex/bin/x86-64_linux
