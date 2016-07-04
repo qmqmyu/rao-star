@@ -42,7 +42,7 @@ Demo of RAO* being used to generate plans from an RMPyL program.
 """
 from rao.raostar import RAOStar
 from rao.export import policy_to_dot,policy_to_rmpyl
-from rao.models.rmpylmodel import BaseRMPyLUnraveler
+from rao.models.rmpylmodel import BaseRMPyLUnraveler,StrongStrongRMPyLUnraveler
 from rmpyl.rmpyl import RMPyL, Episode
 
 class UAV:
@@ -162,18 +162,103 @@ def rmpyl_parallel_uav():
                     ))
     return prog
 
+def rmpyl_infeasible():
+    prog = RMPyL()
+    prog *= Episode(action='(cab-ride)',duration={'ctype':'controllable','lb':10,'ub':20})
+    prog.add_overall_temporal_constraint(ctype='controllable',lb=0.0,ub=5.0)
+    return prog
+
+def rmpyl_low_risk():
+    prog = RMPyL()
+    prog *= Episode(action='(cab-ride)',duration={'ctype':'uncontrollable_probabilistic',
+                                                  'distribution':{'type':'uniform',
+                                                                  'lb':5.0,'ub':10.0}})
+    prog.add_overall_temporal_constraint(ctype='controllable',lb=5.0,ub=9.9)
+    return prog
+
+def rmpyl_observation_risk():
+    prog = RMPyL()
+    prog *= prog.observe(
+                {'name':'travel','ctype':'probabilistic',
+                 'domain':['Short','Long'],'probability':[0.7,0.3]},
+                 Episode(action='(cab-ride-long)',duration={'ctype':'uncontrollable_probabilistic',
+                                                             'distribution':{'type':'uniform',
+                                                                             'lb':5.0,'ub':11.0}}),
+                 Episode(action='(cab-ride-short)',duration={'ctype':'uncontrollable_probabilistic',
+                                                            'distribution':{'type':'uniform',
+                                                                            'lb':5.0,'ub':10.0}}))
+    prog.add_overall_temporal_constraint(ctype='controllable',lb=0.0,ub=10.0)
+    return prog
+
+def rmpyl_choice_risk():
+    prog = RMPyL()
+    prog *= prog.decide(
+                {'name':'transport-choice','domain':['Bike','Car','Stay'],
+                 'utility':[100,70,0]},
+                 prog.observe(
+                             {'name':'travel','ctype':'probabilistic',
+                              'domain':['Short','Long'],'probability':[0.7,0.3]},
+                              Episode(action='(cab-ride-long)',duration={'ctype':'uncontrollable_probabilistic',
+                                                                          'distribution':{'type':'uniform',
+                                                                                          'lb':5.0,'ub':11.0}}),
+                              Episode(action='(cab-ride-short)',duration={'ctype':'uncontrollable_probabilistic',
+                                                                         'distribution':{'type':'uniform',
+                                                                                         'lb':5.0,'ub':10.0}})),
+                 Episode(action='(drive-car)',
+                                       duration={'ctype':'controllable','lb':6.0,'ub':8.0}),
+                 Episode(action='(stay)'))
+
+    prog.add_overall_temporal_constraint(ctype='controllable',lb=0.0,ub=10.0)
+    return prog
+
+def rmpyl_icaps14():
+    """
+    Example from (Santana & Williams, ICAPS14).
+    """
+    prog = RMPyL()
+    prog *= prog.decide(
+                {'name':'transport-choice','domain':['Bike','Car','Stay'],
+                 'utility':[100,70,0]},
+                 prog.observe(
+                    {'name':'slip','domain':[True,False],
+                     'ctype':'probabilistic','probability':[0.051,1.0-0.051]},
+                     prog.sequence(Episode(action='(ride-bike)',
+                                           duration={'ctype':'controllable','lb':15,'ub':25}),
+                                   Episode(action='(change)',
+                                           duration={'ctype':'controllable','lb':20,'ub':30})),
+                      Episode(action='(ride-bike)',duration={'ctype':'controllable','lb':15,'ub':25})),
+                 prog.observe(
+                    {'name':'accident','domain':[True,False],
+                     'ctype':'probabilistic','probability':[0.013,1.0-0.013]},
+                     prog.sequence(Episode(action='(tow-vehicle)',
+                                          duration={'ctype':'controllable','lb':30,'ub':90}),
+                                  Episode(action='(cab-ride)',
+                                          duration={'ctype':'controllable','lb':10,'ub':20})),
+                     Episode(action='(drive)',duration={'ctype':'controllable','lb':10,'ub':20})),
+                 Episode(action='(stay)'))
+
+    prog.add_overall_temporal_constraint(ctype='controllable',lb=0.0,ub=30.0)
+    return prog
+
 # prog = rmpyl_uav()
 # prog = rmpyl_nested_uav()
-prog = rmpyl_parallel_uav()
+# prog = rmpyl_parallel_uav()
+# prog = rmpyl_infeasible()
+# prog = rmpyl_low_risk()
+# prog = rmpyl_observation_risk()
+# prog = rmpyl_choice_risk()
+prog = rmpyl_icaps14()
 
 prog.to_ptpn(filename='rmpyl_input_ptpn.tpn')
 
 rmpyl_model = BaseRMPyLUnraveler()
+# rmpyl_model = StrongStrongRMPyLUnraveler(verbose=1)
+
 b0 = rmpyl_model.get_initial_belief(prog)
 
-planner = RAOStar(rmpyl_model,node_name='id',cc=0.0,cc_type='overall',
+planner = RAOStar(rmpyl_model,node_name='id',cc=0.2,cc_type='overall',
                   terminal_prob=1.0,randomization=0.0,propagate_risk=True,
-                  verbose=1)
+                  verbose=2,animation=True)
 
 policy,explicit,performance = planner.search(b0)
 

@@ -105,30 +105,33 @@ class BaseRMPyLUnraveler(CCHyperGraphModel):
         """
         rmpyl_actions=[]
         if not self.is_terminal(state):
-            curr_epi = state['episode_stack'][-1] #Episode on top of the stack
-            composition = curr_epi.composition
+            if len(state['episode_stack'])>0:
+                curr_epi = state['episode_stack'][-1] #Episode on top of the stack
+                composition = curr_epi.composition
 
-            #Choice episodes, depending on whether they are controllable or
-            #uncontrollable, must be treated differently.
-            if composition=='choose':
-                choice = curr_epi.start
-                if choice.type=='controllable':
-                    #All possible assignments of the controllable choice
-                    rmpyl_actions = [RMPyLAction(type='assign',
-                                                 description=ChoiceAssignment(choice,v,False)) for v in choice.domain]
-                elif choice.type=='probabilistic':
-                    rmpyl_actions = [RMPyLAction(type='observe',
-                                                 description=ChoiceAssignment(choice,None,False))]
+                #Choice episodes, depending on whether they are controllable or
+                #uncontrollable, must be treated differently.
+                if composition=='choose':
+                    choice = curr_epi.start
+                    if choice.type=='controllable':
+                        #All possible assignments of the controllable choice
+                        rmpyl_actions = [RMPyLAction(type='assign',
+                                                     description=ChoiceAssignment(choice,v,False)) for v in choice.domain]
+                    elif choice.type=='probabilistic':
+                        rmpyl_actions = [RMPyLAction(type='observe',
+                                                     description=ChoiceAssignment(choice,None,False))]
+                    else:
+                        raise ValueError('Set-bounded uncontrollable choices cannot be currently handled.')
+
+                #Any other type of composition, including primitive, can only be
+                #expanded.
                 else:
-                    raise ValueError('Set-bounded uncontrollable choices cannot be currently handled.')
-
-            #Any other type of composition, including primitive, can only be
-            #expanded.
+                    if composition == None: #Primitive episode
+                        rmpyl_actions = [RMPyLAction(type='primitive',description=curr_epi.action)]
+                    else: #Sequential or parallel episode
+                        rmpyl_actions = [RMPyLAction(type='expand',description=composition)]
             else:
-                if composition == None: #Primitive episode
-                    rmpyl_actions = [RMPyLAction(type='primitive',description=curr_epi.action)]
-                else: #Sequential or parallel episode
-                    rmpyl_actions = [RMPyLAction(type='expand',description=composition)]
+                rmpyl_actions = [RMPyLAction(type='halt',description='unraveling')]
 
         return rmpyl_actions
 
@@ -136,47 +139,52 @@ class BaseRMPyLUnraveler(CCHyperGraphModel):
         """
         Returns the next state, after executing an unraveling operator.
         """
-        curr_epi = state['episode_stack'][-1] #Current episode
-        stack_popped = state['episode_stack'][:-1]
-
-        if curr_epi.composition==None:
-            ipdb.set_trace()
-
-        #Updates the global constraint store
-        self.global_constraint_store.update(curr_epi.temporal_constraints)
-
-        #For controllable choices, we have a deterministic transition
-        #corresponding to the assignment
-        if action.type=='assign':
-            choice = curr_epi.start
-            #Deterministic transition
-            prob_list = [1.0]
-            #Selects internal episode corresponding to the decision assignment
-            next_episode =  curr_epi.internal_episodes[choice.domain.index(action.description.value)]
-            #Enstacks the next episode
-            stack_list = [ stack_popped+[next_episode] ]
-            #Adds the assignment to the controllable choice
-            decisions_list= [ state['decisions']+[action.description] ]
-
-        #For probabilistic uncontrollable choices, we have a distribution over
-        #next states.
-        elif action.type=='observe':
-            choice = curr_epi.start
-            #Probabilistic transition
-            prob_list = choice.probability
-            #List of next stack
-            stack_list = [stack_popped+[ne] for ne in curr_epi.internal_episodes]
-            #All branches share the same decisions
-            decisions_list= [state['decisions']]*len(prob_list)
-
-        #Just extends the stack with the new active episodes from a sequential
-        #or parallel composition, or nothing for a primitive episode.
-        else:
+        #Halting action
+        if action.type=='halt':
             prob_list = [1.0]
             #Extends the stack with the new active episodes
-            stack_list = [ stack_popped+list(reversed(curr_epi.internal_episodes))]
+            stack_list = [None]
             #Decisions are unchanged
-            decisions_list=[state['decisions']]
+            decisions_list= [state['decisions']]
+        else:
+            curr_epi = state['episode_stack'][-1] #Current episode
+            stack_popped = state['episode_stack'][:-1]
+
+            #Updates the global constraint store
+            self.global_constraint_store.update(curr_epi.temporal_constraints)
+
+            #For controllable choices, we have a deterministic transition
+            #corresponding to the assignment
+            if action.type=='assign':
+                choice = curr_epi.start
+                #Deterministic transition
+                prob_list = [1.0]
+                #Selects internal episode corresponding to the decision assignment
+                next_episode =  curr_epi.internal_episodes[choice.domain.index(action.description.value)]
+                #Enstacks the next episode
+                stack_list = [ stack_popped+[next_episode] ]
+                #Adds the assignment to the controllable choice
+                decisions_list= [ state['decisions']+[action.description] ]
+
+            #For probabilistic uncontrollable choices, we have a distribution over
+            #next states.
+            elif action.type=='observe':
+                choice = curr_epi.start
+                #Probabilistic transition
+                prob_list = choice.probability
+                #List of next stack
+                stack_list = [stack_popped+[ne] for ne in curr_epi.internal_episodes]
+                #All branches share the same decisions
+                decisions_list= [state['decisions']]*len(prob_list)
+
+            #Just extends the stack with the new active episodes from a sequential
+            #or parallel composition, or nothing for a primitive episode.
+            else:
+                prob_list = [1.0]
+                #Extends the stack with the new active episodes
+                stack_list = [ stack_popped+list(reversed(curr_epi.internal_episodes))]
+                #Decisions are unchanged
+                decisions_list=[state['decisions']]
 
         next_states=[]
 
@@ -189,7 +197,7 @@ class BaseRMPyLUnraveler(CCHyperGraphModel):
         """
         A state is terminal if all active episodes have been unraveled.
         """
-        return len(state['episode_stack'])==0
+        return state['episode_stack']==None
 
     def value(self,state,action):
         """
@@ -202,9 +210,9 @@ class BaseRMPyLUnraveler(CCHyperGraphModel):
 
     def terminal_value(self,state):
         """
-        No utility at the end of execution.
+        No penalty if the unraveling was normally halted.
         """
-        return 0.0
+        return 0.0 if self.is_terminal(state) else -float('inf')
 
     def heuristic(self,state):
         """
@@ -253,6 +261,8 @@ class StrongStrongRMPyLUnraveler(BaseRMPyLUnraveler):
         if self.perform_scheduling:
             if not 'scheduling_risk' in state:
                 prob_success = self.strong_cons.strong_consistency(state['decisions'],self.global_constraint_store)
+                # if prob_success<1.0:
+                #     ipdb.set_trace()
                 state['scheduling_risk'] = 1.0-prob_success
 
             #If the scheduling risk is 1.0, it means that there is not scenario

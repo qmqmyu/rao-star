@@ -122,8 +122,8 @@ def rmpyl_probabilistic_icaps14():
     prog.add_overall_temporal_constraint(ctype='controllable',lb=0.0,ub=30.0)
     return prog
 
-#prog = rmpyl_icaps14()
-prog = rmpyl_probabilistic_icaps14()
+prog = rmpyl_icaps14()
+# prog = rmpyl_probabilistic_icaps14()
 
 prog.to_ptpn(filename='rmpyl_icaps14_ptpn.tpn')
 
@@ -132,9 +132,9 @@ rmpyl_model = StrongStrongRMPyLUnraveler(verbose=1)
 
 b0 = rmpyl_model.get_initial_belief(prog)
 
-planner = RAOStar(rmpyl_model,node_name='id',cc=0.05,cc_type='overall',
+planner = RAOStar(rmpyl_model,node_name='id',cc=0.0,cc_type='overall',
                   terminal_prob=1.0,randomization=0.0,propagate_risk=True,
-                  verbose=1)
+                  verbose=2)
 
 policy,explicit,performance = planner.search(b0)
 
